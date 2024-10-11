@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+
+import uuid
+
 from behave.model import ScenarioOutline
 from behave.formatter.base import Formatter
 import behave2cucumberZephyr
@@ -28,12 +31,13 @@ class ZephyrFormatter(Formatter):
     json_scalar_types = json_number_types + (six.text_type, bool, type(None))
     file = None
     step_count = 0
+    temp_json_name = ''
     
 
     def __init__(self, stream_opener, config):
         super(ZephyrFormatter, self).__init__(stream_opener, config)
         self.create_results_dirs()
-        self.file_cleanup(True)
+        # self.file_cleanup(True)
         self.feature_count = 0
         self.current_feature = None
         self.current_feature_data = None
@@ -41,6 +45,7 @@ class ZephyrFormatter(Formatter):
         self._step_index = 0
         self.step_count = 0
         self.str_result_json=""
+        self.temp_json_name=f'{uuid.uuid4()}-tmp.json'
 
 
     def reset(self):
@@ -55,7 +60,7 @@ class ZephyrFormatter(Formatter):
         pass
 
     def feature(self, feature):
-        self.file_cleanup(False, "tmp.json")
+        # self.file_cleanup(False, self.temp_json_name)
         self.open_new_file()
         self.reset()
         self.current_feature = feature
@@ -210,7 +215,7 @@ class ZephyrFormatter(Formatter):
         self.reset()
 
     def open_new_file(self):
-        self.file = open(f"{self.results_dir}/tmp.json", "w")
+        self.file = open(f"{self.results_dir}/{self.temp_json_name}", "w")
         
 
     def close(self):
@@ -306,7 +311,7 @@ class ZephyrFormatter(Formatter):
 
             with ZipFile(f"{self.results_dir}/{self.results_file}", "w") as zf:
                 for file_name in listdir(self.results_dir):
-                    if file_name.endswith(".json") and file_name != "tmp.json":
+                    if file_name.endswith(".json") and file_name != self.temp_json_name:
                         zf.write(f"{self.results_dir}/{file_name}")
                 zf.close()
 
@@ -325,12 +330,12 @@ class ZephyrFormatter(Formatter):
                 break
 
         self.close_stream()
-        with open(f"{self.results_dir}/tmp.json", "r") as f:
+        with open(f"{self.results_dir}/{self.temp_json_name}", "r") as f:
             content = json.load(f)
             zephyr_json = behave2cucumberZephyr.convert(content)
             f.close()
 
-        file_name = f"{self.results_dir}/{tag}.json"
+        file_name = f"{self.results_dir}/{uuid.uuid4()}.json"
 
         with open(file_name, "w") as f:
             # json.dump(zephyr_json, f)
